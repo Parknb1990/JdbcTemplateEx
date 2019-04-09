@@ -82,7 +82,14 @@
 			</exclusions>
 			<scope>runtime</scope>
 		</dependency>
-
+		
+		<!-- jdbc template -->
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<artifactId>spring-jdbc</artifactId>
+			<version>${org.springframework-version}</version>
+		</dependency>
+		
 		<!-- @Inject -->
 		<dependency>
 			<groupId>javax.inject</groupId>

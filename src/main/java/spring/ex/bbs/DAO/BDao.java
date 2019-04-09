@@ -1,334 +1,168 @@
 package spring.ex.bbs.DAO;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Timestamp;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
-import javax.naming.Context;
-import javax.naming.InitialContext;
 import javax.sql.DataSource;
 
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.PreparedStatementCreator;
+import org.springframework.jdbc.core.PreparedStatementSetter;
+
 import spring.ex.bbs.DTO.BDto;
+import spring.ex.bbs.util.Constant;
 
 public class BDao {
 
 	DataSource dataSource;
+	JdbcTemplate template;
+	
+	public BDao() {
+		
+		template = Constant.template;
+	}
+	
+	
 	
 	public BDto contentView(String strId) {
 		
 		upHit(strId);
+		String sql = "select *from mvc_board where bId = "+strId;
+		return template.queryForObject(sql, new BeanPropertyRowMapper<BDto>(BDto.class));
 		
-		BDto dto = null;
+	}
+	
+	
+	
+	
+	public void write(final String bName, final String bTitle, final String bContent) {
 		
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		
-		try {
-			conn = dataSource.getConnection();
-			String sql = "select *from mvc_board where bId = ?";
-			pstmt = conn.prepareStatement(sql);
-			pstmt.setInt(1, Integer.parseInt(strId));
-			rs = pstmt.executeQuery();
+		template.update(new PreparedStatementCreator() {
 			
-			if (rs.next()) {
-				int  bId = rs.getInt("bId");
-				String bName = rs.getString("bName");
-				String bTitle = rs.getString("bTitle");
-				String bContent = rs.getString("bContent");
-				Timestamp bDate = rs.getTimestamp("bDate");
-				int bHit = rs.getInt("bHit");
-				int bGroup = rs.getInt("bGroup");
-				int bStep = rs.getInt("bStep");
-				int bIndent = rs.getInt("bIndent");
+			@Override
+			public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
+				String sql = "insert into mvc_board(bId, bName, bTitle, bContent, bHit, bGroup, bStep, bIndent) values(mvc_board_seq.nextval, ?, ?, ?, 0, mvc_board_seq.currval, 0, 0)";
+				PreparedStatement pstmt = con.prepareStatement(sql);
+//				내부 메소드에서 바깥쪽 메소드를 사용하게되면 참조값이 변경될수도 있다. 그래서 변경되지 말라고 final 키워드를 사용한다.
+				pstmt.setString(1, bName);
+				pstmt.setString(2, bTitle);
+				pstmt.setString(3, bContent);
 				
-				dto = new BDto(bId, bName, bTitle, bContent, bDate, bHit, bGroup, bStep, bIndent);
-				
+				return pstmt;
 			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				if (rs != null) rs.close();
-				if (pstmt != null) pstmt.close();
-				if (conn != null) conn.close();
-			} catch(Exception e2) {
-				e2.printStackTrace();
-			}
-		}
-		return dto;
+		});
 	}
 	
-	public void write(String bName, String bTitle, String bContent) {
-		String url = "jdbc:oracle:thin:@localhost:1521:SDUDB";
-		String user = "scott";
-		String pw = "tiger";
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		
-		try {
-			//conn = dataSource.getConnection();
-			conn = DriverManager.getConnection(url, user, pw);
-			String sql = "insert into mvc_board(bId, bName, bTitle, bContent, bHit, bGroup, bStep, bIndent) values(mvc_board_seq.nextval, ?, ?, ?, 0, mvc_board_seq.currval, 0, 0)";
-			pstmt = conn.prepareStatement(sql);
-			pstmt.setString(1, bName);
-			pstmt.setString(2, bTitle);
-			pstmt.setString(3, bContent);
-			
-			pstmt.executeUpdate();
-		} catch(Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				if (pstmt != null) pstmt.close();
-				if (conn != null) conn.close();
-			} catch(Exception e2) {
-				e2.printStackTrace();
-			}
-		}
-	}
-	
-	
-	public BDao() {
-		
-		try {
-//			String url = "jdbc:oracle:thin:@localhost:1521:SDUDB";
-//			String user = "scott";
-//			String pw = "tiger";
-			Context context = new InitialContext();
-			dataSource = (DataSource) context.lookup("java:comp/env/jdbc/sdudb");
-			
-		} catch(Exception e) {
-			e.printStackTrace();
-		}
-	}
 	
 	public ArrayList<BDto> list() {
 		
-		ArrayList<BDto> dtos = new ArrayList<BDto>();
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
+		//ArrayList<BDto> dtos = null;
+		String sql = "select bId, bName, bTitle, bContent, bDate, bHit, bGroup, bStep, bIndent from mvc_board order by bGroup desc, bStep asc";
+		return (ArrayList<BDto>) template.query(sql, new BeanPropertyRowMapper<BDto>(BDto.class));
 		
-		try {
-			conn = dataSource.getConnection();
-			String sql = "select bId, bName, bTitle, bContent, bDate, bHit, bGroup, bStep, bIndent from mvc_board order by bGroup desc, bStep asc";
-			pstmt = conn.prepareStatement(sql);
-			rs = pstmt.executeQuery();
-			
-			while(rs.next()) {
-				int bId = rs.getInt("bId");
-				String bName = rs.getString("bName");
-				String bTitle = rs.getString("bTitle");
-				String bContent = rs.getString("bContent");
-				Timestamp bDate = rs.getTimestamp("bDate");
-				int bHit = rs.getInt("bHit");
-				int bGroup = rs.getInt("bGroup");
-				int bStep = rs.getInt("bStep");
-				int bIndent = rs.getInt("bIndent");
-				
-				BDto dto = new BDto(bId, bName, bTitle, bContent, bDate, bHit, bGroup, bStep, bIndent);
-				dtos.add(dto);
-			}
-			
-		} catch(Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				if (rs != null) rs.close();
-				if ( pstmt != null) pstmt.close();
-				if (conn != null) conn.close();
-			} catch (Exception e2) {
-				e2.printStackTrace();
-			}
-		}
-		return dtos;
+		//return dtos;
 	}
 	
-	private void upHit(String strId) {
+	private void upHit(final String strId) {
 		
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		
-		try {
-			conn = dataSource.getConnection();
-			String sql = "update mvc_board set bHit = bHit+1 where bId = ?";
-			pstmt = conn.prepareStatement(sql);
-			pstmt.setString(1, strId);
-			pstmt.executeUpdate();
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				if (pstmt != null) pstmt.close();
-				if (conn != null) conn.close();
-			} catch (Exception e2) {
-				e2.printStackTrace();
+		String sql = "update mvc_board set bHit = bHit+1 where bId = ?";
+		template.update(sql, new PreparedStatementSetter() {
+			
+			@Override
+			public void setValues(PreparedStatement ps) throws SQLException {
+//				내부 메소드에서 바깥쪽 메소드를 사용하게되면 참조값이 변경될수도 있다. 그래서 변경되지 말라고 final 키워드를 사용한다.
+				ps.setInt(1, Integer.parseInt(strId));
+				
 			}
-		}
+		});
 	}
 
-	public void modify(String bId, String bName, String bTitle, String bContent) {
+	public void modify(final String bId, final String bName, final String bTitle, final String bContent) {
+
+		String sql = "update mvc_board set bName = ?, bTitle = ?, bContent = ? where bId = ?";
 		
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		
-		try {
-			conn = dataSource.getConnection();
-			String sql = "update mvc_board set bName = ?, bTitle = ?, bContent = ? where bId = ?";
-			pstmt = conn.prepareStatement(sql);
-			pstmt.setString(1, bName);
-			pstmt.setString(2, bTitle);
-			pstmt.setString(3, bContent);
-			pstmt.setInt(4, Integer.parseInt(bId));
+		template.update(sql, new PreparedStatementSetter() {
 			
-			pstmt.executeUpdate();
-			
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				if (pstmt != null) pstmt.close();
-				if (conn != null) conn.close();
-			} catch (Exception e2) {
-				e2.printStackTrace();
+			@Override
+			public void setValues(PreparedStatement ps) throws SQLException {
+//				내부 메소드에서 바깥쪽 메소드를 사용하게되면 참조값이 변경될수도 있다. 그래서 변경되지 말라고 final 키워드를 사용한다.
+				ps.setString(1,  bName);
+				ps.setString(2,  bTitle);
+				ps.setString(3,  bContent);
+				ps.setInt(4,  Integer.parseInt(bId));
+				
 			}
-		}
-		
+		});
 	}
 
-	public void delete(String bId) {
+	public void delete(final String bId) {
 		
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		
-		try {
-			conn = dataSource.getConnection();
-			String sql = "delete from mvc_board where bId=?";
-			pstmt = conn.prepareStatement(sql);
-			pstmt.setInt(1, Integer.parseInt(bId));
+		String sql = "delete from mvc_board where bId = ?";
+		template.update(sql, new PreparedStatementSetter() {
 			
-			pstmt.executeUpdate();
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				if (pstmt != null) pstmt.close();
-				if (conn != null) conn.close();
-			} catch(Exception e2) {
-				e2.printStackTrace();
+			@Override
+			public void setValues(PreparedStatement ps) throws SQLException {
+//				내부 메소드에서 바깥쪽 메소드를 사용하게되면 참조값이 변경될수도 있다. 그래서 변경되지 말라고 final 키워드를 사용한다.
+				ps.setInt(1, Integer.parseInt(bId));
+				
 			}
-		}
+		});
 	}
 
 //	답글 데이터 가져오기
 	
 	public BDto reply_view(String strId) {
-		BDto dto = null;
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
 		
-		try {
-			conn = dataSource.getConnection();
-			String sql = "select *from mvc_board where bId=?";
-			pstmt = conn.prepareStatement(sql);
-			pstmt.setInt(1, Integer.parseInt(strId));
-			rs = pstmt.executeQuery();
-	
-			while(rs.next()) {
-				int bId = rs.getInt("bId");
-				String bName = rs.getString("bName");
-				String bTitle = rs.getString("bTitle");
-				String bContent = rs.getString("bContent");
-				Timestamp bDate = rs.getTimestamp("bDate");
-				int bHit = rs.getInt("bHit");
-				int bGroup = rs.getInt("bGroup");
-				int bStep = rs.getInt("bStep");
-				int bIndent = rs.getInt("bIndent");
-				
-				dto = new BDto(bId, bName, bTitle, bContent, bDate, bHit, bGroup, bStep, bIndent);
-			}
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				if (rs != null) rs.close();
-				if (pstmt != null) pstmt.close();
-				if (conn != null) conn.close();
-			} catch (Exception e2) {
-				e2.printStackTrace();
-			}
-		}
-		return dto;
+		String sql = "select *from mvc_board where bId = ?"+strId;
+		return template.queryForObject(sql, new BeanPropertyRowMapper<BDto>(BDto.class));
 	}
 
 	
 	
 //	답글 메소드
-	public void reply(String bId, String bName, String bTitle, String bContent, String bGroup, String bStep,
-			String bIndent) {
+	public void reply(final String bId, final String bName, final String bTitle, final String bContent, final String bGroup, final String bStep,
+			final String bIndent) {
 		
 //		답글 들여쓰기 메소드
 		replyShape(bGroup, bStep);
 		
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		
-		try {
-			conn = dataSource.getConnection();
-			String sql = "insert into mvc_board (bId, bName, bTitle, bContent, bGroup, bStep, bIndent) values (mvc_board_seq.nextval, ?, ?, ?, ?, ?, ?)";
-			pstmt = conn.prepareStatement(sql);
-			pstmt.setString(1, bName);
-			pstmt.setString(2, bTitle);
-			pstmt.setString(3, bContent);
-			pstmt.setInt(4, Integer.parseInt(bGroup));
-			pstmt.setInt(5, Integer.parseInt(bStep)+1);
-			pstmt.setInt(6, Integer.parseInt(bIndent)+1);
-			pstmt.executeUpdate();
+		String sql = "insert into mvc_board(bId, bName, bTitle, bContent, bGroup, bStep, bIndent) values (mvc_board_sql.nextval, ?,?,?,?,?,?)";
+		template.update(sql, new PreparedStatementSetter() {
 			
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				if (pstmt != null) pstmt.close();
-				if (conn != null) conn.close();
-			} catch(Exception e2) {
-				e2.printStackTrace();
+			@Override
+			public void setValues(PreparedStatement ps) throws SQLException {
+//				내부 메소드에서 바깥쪽 메소드를 사용하게되면 참조값이 변경될수도 있다. 그래서 변경되지 말라고 final 키워드를 사용한다.
+				ps.setString(1, bName);
+				ps.setString(2, bTitle);
+				ps.setString(3, bContent);
+				ps.setInt(1, Integer.parseInt(bGroup));
+				ps.setInt(1, Integer.parseInt(bStep));
+				ps.setInt(1, Integer.parseInt(bIndent));
+				
 			}
-		}
-		
+		});	
 	}
 
 	
 //	답글 들여쓰기 모양 잡기
-	private void replyShape(String bGroup, String bStep) {
+	private void replyShape(final String bGroup, final String bStep) {
 		
-		Connection conn = null;
-		PreparedStatement pstmt = null;
-		
-		try {
-			conn = dataSource.getConnection();
-			String sql = "update mvc_board set bStep = bStep+1 where bGroup=? and bStep > ?";
-			pstmt = conn.prepareStatement(sql);
-			pstmt.setInt(1,  Integer.parseInt(bGroup));
-			pstmt.setInt(2, Integer.parseInt(bStep));
+		String sql = "update mvc_board set bStep = bStep+1 where bGroup=? and bSep > ?";
+		template.update(sql, new PreparedStatementSetter() {
 			
-			pstmt.executeUpdate();
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			try {
-				if (pstmt != null) pstmt.close();
-				if (conn != null) conn.close();
-			} catch (Exception e2) {
-				e2.printStackTrace();
+			@Override
+			public void setValues(PreparedStatement ps) throws SQLException {
+//				내부 메소드에서 바깥쪽 메소드를 사용하게되면 참조값이 변경될수도 있다. 그래서 변경되지 말라고 final 키워드를 사용한다.
+				ps.setInt(1, Integer.parseInt(bGroup));
+				ps.setInt(1, Integer.parseInt(bStep));
+				
+				
 			}
-		}
-		
+		});
+
 	}
 
 }

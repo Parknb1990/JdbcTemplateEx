@@ -2,6 +2,8 @@ package spring.ex.bbs.Controller;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,11 +17,21 @@ import spring.ex.bbs.Command.BModifyCommand;
 import spring.ex.bbs.Command.BReplyCommand;
 import spring.ex.bbs.Command.BReplyViewCommand;
 import spring.ex.bbs.Command.BWriteCommand;
+import spring.ex.bbs.util.Constant;
 
 @Controller
 public class BController {
 
-BCommand command;
+	BCommand command;
+		
+	public JdbcTemplate template;
+	
+	@Autowired
+	public void setTemplate(JdbcTemplate template) {
+		this.template = template;
+		Constant.template = this.template;
+	}
+	
 	
 	@RequestMapping("/list")
 	public String list(Model model) {
